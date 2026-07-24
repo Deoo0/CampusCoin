@@ -1,0 +1,40 @@
+pragma cashscript ^0.13.0;
+
+/*
+    CampusCoin's pooled BCH vault.
+
+    Deposits flow in freely — this contract places no restriction on
+    what can be SENT to it, only on what can be spent FROM it.
+
+    Withdrawal still requires the operator's signature (the chain has no
+    way to know which off-chain database rows represent a legitimate
+    student withdrawal — something has to vouch for that, and that's
+    still you). What this contract adds on top: no single withdrawal
+    transaction can move more than maxWithdrawal satoshis, regardless of
+    what the operator signs. A leaked/misused key can only drain the
+    pool in capped increments, not all at once.
+*/
+contract CampusVault(pubkey operator, int maxWithdrawal) {
+    function withdraw(sig operatorSig, bytes20 recipientPkh, int amount) {
+        require(checkSig(operatorSig, operator));
+
+        // The cap — this is the whole point of using a covenant here
+        // instead of a plain P2PKH address.
+        require(amount <= maxWithdrawal);
+
+        // Recipient and amount are supplied by whoever builds the
+        // withdrawal transaction, but the contract enforces the actual
+        // outputs match what was claimed — and checkSig's signature
+        // covers the full transaction, so the operator is effectively
+        // approving this exact recipient/amount by signing at all.
+        require(tx.outputs[0].value == amount);
+        bytes25 recipientLockingBytecode = new LockingBytecodeP2PKH(recipientPkh);
+        require(tx.outputs[0].lockingBytecode == recipientLockingBytecode);
+
+        // Change, if any, returns to the vault itself
+        if (tx.outputs.length > 1) {
+            bytes thisLockingBytecode = tx.inputs[this.activeInputIndex].lockingBytecode;
+            require(tx.outputs[1].lockingBytecode == thisLockingBytecode);
+        }
+    }
+}

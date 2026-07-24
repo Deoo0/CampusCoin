@@ -1,0 +1,16 @@
+{
+  "name": "campuscoin-chain-service",
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "start": "node index.mjs",
+    "vault-setup": "node scripts/vault-setup.mjs"
+  },
+  "dependencies": {
+    "cashc": "^0.13.0",
+    "cashscript": "^0.13.0",
+    "@bitauth/libauth": "^3.0.0",
+    "express": "^4.19.0",
+    "dotenv": "^16.4.0"
+  }
+}
